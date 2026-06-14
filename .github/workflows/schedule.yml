@@ -1,0 +1,23 @@
+name: Discord Notifier
+
+on:
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: 'スロット番号 (1=朝, 2=昼, 3=夜)'
+        required: true
+        default: '1'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Send to Discord
+        run: python x_discord_notify.py --slot ${{ github.event.inputs.slot }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
