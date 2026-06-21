@@ -1,30 +1,26 @@
 import os
 import sys
+import time
 import requests
 import argparse
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime
 
 def load_slot(content, slot):
-    labels = {"1": "【朝】", "2": "【昼】", "3": "【夜】"}
-    label = labels.get(slot)
-    if not label:
+    parts = [p.strip() for p in content.split("---")]
+    idx = int(slot) - 1
+    if idx < 0 or idx >= len(parts):
         return None
+    return parts[idx] if parts[idx] else None
 
-    lines = content.split("\n")
-    result = []
-    capturing = False
-
-    for line in lines:
-        if line.strip() == label:
-            capturing = True
-            continue
-        if capturing:
-            if line.strip() in ["【朝】", "【昼】", "【夜】"]:
-                break
-            result.append(line)
-
-    return "\n".join(result).strip()
+def get_header(slot):
+    now = datetime.now()
+    weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+    weekday = weekdays[now.weekday()]
+    date_str = now.strftime(f"%Y-%m-%d（{weekday}）")
+    slot_info = {"1": ("朝", "07:00"), "2": ("昼", "12:00"), "3": ("夜", "21:00")}
+    slot_name, time_str = slot_info.get(str(slot), ("", ""))
+    return f"[{date_str}{slot_name} {time_str}]"
 
 def main():
     parser = argparse.ArgumentParser()
@@ -50,11 +46,12 @@ def main():
         print(f"slot {args.slot} の内容が見つかりません")
         sys.exit(0)
 
-    slot_labels = {"1": "朝", "2": "昼", "3": "夜"}
-    label = slot_labels.get(args.slot, args.slot)
+    header = get_header(args.slot)
 
-    message = f"**【{label}の投稿】**\n\n{post}"
-    requests.post(webhook_url, json={"content": message}, timeout=10)
+    requests.post(webhook_url, json={"content": header}, timeout=10)
+    time.sleep(1)
+    requests.post(webhook_url, json={"content": post}, timeout=10)
+
     print(f"送信完了：slot {args.slot}")
 
 if __name__ == "__main__":

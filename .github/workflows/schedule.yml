@@ -1,6 +1,10 @@
 name: Discord Notifier
 
 on:
+  schedule:
+    - cron: '0 22 * * *'  # 朝7:00 JST
+    - cron: '0 3 * * *'   # 昼12:00 JST
+    - cron: '0 12 * * *'  # 夜21:00 JST
   workflow_dispatch:
     inputs:
       slot:
@@ -17,7 +21,19 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install requests
+      - name: Determine slot
+        id: slot
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "slot=${{ github.event.inputs.slot }}" >> $GITHUB_OUTPUT
+          else
+            HOUR=$(date -u +%H)
+            if [ "$HOUR" = "22" ]; then echo "slot=1" >> $GITHUB_OUTPUT
+            elif [ "$HOUR" = "03" ]; then echo "slot=2" >> $GITHUB_OUTPUT
+            else echo "slot=3" >> $GITHUB_OUTPUT
+            fi
+          fi
       - name: Send to Discord
-        run: python x_discord_notify.py --slot ${{ github.event.inputs.slot }}
+        run: python x_discord_notify.py --slot ${{ steps.slot.outputs.slot }}
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
